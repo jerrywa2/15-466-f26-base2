@@ -84,7 +84,6 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 void PlayMode::update(float elapsed) {
 
 	//oscillation presets:
-
 	constexpr float Amplitude = 1.5f;
 	constexpr float Period = 3.0f;
 	osc_time += elapsed;
@@ -130,42 +129,14 @@ void PlayMode::update(float elapsed) {
 	} else {
 		spawnCD -= elapsed;
 	}
-	
 
 	//bird physics:
-	{
-		//flapping:
-		if (space.pressed && space.downs == 0) {
-			bird_velocity.z = 7.0f;
-		}
-
-		constexpr float Gravity = -24.0f;
-		bird_velocity.z += Gravity * elapsed;
-		bird->position += bird_velocity * elapsed;
+	if (space.pressed && space.downs == 0) {
+		bird_velocity.z = 7.0f; //flap
 	}
-	
-
-	// //move camera:
-	// {
-
-	// 	//combine inputs into a move:
-	// 	constexpr float PlayerSpeed = 30.0f;
-	// 	glm::vec2 move = glm::vec2(0.0f);
-	// 	if (left.pressed && !right.pressed) move.x =-1.0f;
-	// 	if (!left.pressed && right.pressed) move.x = 1.0f;
-	// 	if (down.pressed && !up.pressed) move.y =-1.0f;
-	// 	if (!down.pressed && up.pressed) move.y = 1.0f;
-
-	// 	//make it so that moving diagonally doesn't go faster:
-	// 	if (move != glm::vec2(0.0f)) move = glm::normalize(move) * PlayerSpeed * elapsed;
-
-	// 	glm::mat4x3 frame = camera->transform->make_parent_from_local();
-	// 	glm::vec3 frame_right = frame[0];
-	// 	//glm::vec3 up = frame[1];
-	// 	glm::vec3 frame_forward = -frame[2];
-
-	// 	camera->transform->position += move.x * frame_right + move.y * frame_forward;
-	// }
+	constexpr float Gravity = -24.0f;
+	bird_velocity.z += Gravity * elapsed;
+	bird->position += bird_velocity * elapsed;
 
 	//reset button press counters:
 	left.downs = 0;
@@ -216,7 +187,7 @@ void PlayMode::despawn(Scene::Transform *transform) {
 	scene.cameras.remove_if([transform](Scene::Camera const &c){ return c.transform == transform; });
 	scene.lights.remove_if([transform](Scene::Light const &l){ return l.transform == transform; });
 
-	//the transform itself:
+	//the transform itself
 	scene.transforms.remove_if([transform](Scene::Transform const &t){ return &t == transform; });
 
 	spawned.erase(
