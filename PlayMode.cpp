@@ -12,48 +12,85 @@
 
 #include <random>
 
-GLuint hexapod_meshes_for_lit_color_texture_program = 0;
-Load< MeshBuffer > hexapod_meshes(LoadTagDefault, []() -> MeshBuffer const * {
-	MeshBuffer const *ret = new MeshBuffer(data_path("hexapod.pnct"));
-	hexapod_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
+// GLuint hexapod_meshes_for_lit_color_texture_program = 0;
+// Load< MeshBuffer > hexapod_meshes(LoadTagDefault, []() -> MeshBuffer const * {
+// 	MeshBuffer const *ret = new MeshBuffer(data_path("hexapod.pnct"));
+// 	hexapod_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
+// 	return ret;
+// });
+
+// Load< Scene > hexapod_scene(LoadTagDefault, []() -> Scene const * {
+// 	return new Scene(data_path("hexapod.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+// 		Mesh const &mesh = hexapod_meshes->lookup(mesh_name);
+
+// 		scene.drawables.emplace_back(transform);
+// 		Scene::Drawable &drawable = scene.drawables.back();
+
+// 		drawable.pipeline = lit_color_texture_program_pipeline;
+
+// 		drawable.pipeline.vao = hexapod_meshes_for_lit_color_texture_program;
+// 		drawable.pipeline.type = mesh.type;
+// 		drawable.pipeline.start = mesh.start;
+// 		drawable.pipeline.count = mesh.count;
+
+// 	});
+// });
+
+GLuint main_meshes_for_lit_color_texture_program = 0;
+Load< MeshBuffer > main_meshes(LoadTagDefault, []() -> MeshBuffer const * {
+	MeshBuffer const *ret = new MeshBuffer(data_path("bird.pnct"));
+	main_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
 	return ret;
 });
 
-Load< Scene > hexapod_scene(LoadTagDefault, []() -> Scene const * {
-	return new Scene(data_path("hexapod.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
-		Mesh const &mesh = hexapod_meshes->lookup(mesh_name);
+GLuint pipe_meshes_for_lit_color_texture_program = 0;
+Load< MeshBuffer > pipe_meshes(LoadTagDefault, []() -> MeshBuffer const * {
+	MeshBuffer const *ret = new MeshBuffer(data_path("pipe.pnct"));
+	pipe_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
+	return ret;
+});
 
+Load< Scene > main_scene(LoadTagDefault, []() -> Scene const * {
+	return new Scene(data_path("bird.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+		Mesh const &mesh = main_meshes->lookup(mesh_name);
 		scene.drawables.emplace_back(transform);
 		Scene::Drawable &drawable = scene.drawables.back();
-
 		drawable.pipeline = lit_color_texture_program_pipeline;
-
-		drawable.pipeline.vao = hexapod_meshes_for_lit_color_texture_program;
+		drawable.pipeline.vao = main_meshes_for_lit_color_texture_program;
 		drawable.pipeline.type = mesh.type;
 		drawable.pipeline.start = mesh.start;
 		drawable.pipeline.count = mesh.count;
-
 	});
 });
 
-PlayMode::PlayMode() : scene(*hexapod_scene) {
+PlayMode::PlayMode() : scene(*main_scene) {
 	//get pointers to leg for convenience:
-	for (auto &transform : scene.transforms) {
-		if (transform.name == "Hip.FL") hip = &transform;
-		else if (transform.name == "UpperLeg.FL") upper_leg = &transform;
-		else if (transform.name == "LowerLeg.FL") lower_leg = &transform;
-	}
-	if (hip == nullptr) throw std::runtime_error("Hip not found.");
-	if (upper_leg == nullptr) throw std::runtime_error("Upper leg not found.");
-	if (lower_leg == nullptr) throw std::runtime_error("Lower leg not found.");
+	// for (auto &transform : scene.transforms) {
+	// 	if (transform.name == "Hip.FL") hip = &transform;
+	// 	else if (transform.name == "UpperLeg.FL") upper_leg = &transform;
+	// 	else if (transform.name == "LowerLeg.FL") lower_leg = &transform;
+	// }
+	// if (hip == nullptr) throw std::runtime_error("Hip not found.");
+	// if (upper_leg == nullptr) throw std::runtime_error("Upper leg not found.");
+	// if (lower_leg == nullptr) throw std::runtime_error("Lower leg not found.");
 
-	hip_base_rotation = hip->rotation;
-	upper_leg_base_rotation = upper_leg->rotation;
-	lower_leg_base_rotation = lower_leg->rotation;
+	// hip_base_rotation = hip->rotation;
+	// upper_leg_base_rotation = upper_leg->rotation;
+	// lower_leg_base_rotation = lower_leg->rotation;
+
+	for (auto &transform : scene.transforms) {	
+		if (transform.name == "Bird") bird = &transform;
+	}
+	if (bird == nullptr) throw std::runtime_error("Bird not found.");
 
 	//get pointer to camera for convenience:
 	if (scene.cameras.size() != 1) throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(scene.cameras.size()));
 	camera = &scene.cameras.front();
+	
+	spawn(*pipe_meshes, pipe_meshes_for_lit_color_texture_program, "Cylinder", glm::vec3(0.0f, 10.0f, -5.0f));
+	spawned.back().velocity = glm::vec3(0.0f, -3.0f, 0.0f);
+	spawn(*pipe_meshes, pipe_meshes_for_lit_color_texture_program, "Cylinder.002", glm::vec3(0.0f, 10.0f, 12.0f));
+	spawned.back().velocity = glm::vec3(0.0f, -3.0f, 0.0f);
 }
 
 PlayMode::~PlayMode() {
@@ -61,57 +98,69 @@ PlayMode::~PlayMode() {
 
 bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size) {
 
+	// if (evt.type == SDL_EVENT_KEY_DOWN) {
+	// 	if (evt.key.key == SDLK_ESCAPE) {
+	// 		SDL_SetWindowRelativeMouseMode(Mode::window, false);
+	// 		return true;
+	// 	} else if (evt.key.key == SDLK_A) {
+	// 		left.downs += 1;
+	// 		left.pressed = true;
+	// 		return true;
+	// 	} else if (evt.key.key == SDLK_D) {
+	// 		right.downs += 1;
+	// 		right.pressed = true;
+	// 		return true;
+	// 	} else if (evt.key.key == SDLK_W) {
+	// 		up.downs += 1;
+	// 		up.pressed = true;
+	// 		return true;
+	// 	} else if (evt.key.key == SDLK_S) {
+	// 		down.downs += 1;
+	// 		down.pressed = true;
+	// 		return true;
+	// 	}
+	// } else if (evt.type == SDL_EVENT_KEY_UP) {
+	// 	if (evt.key.key == SDLK_A) {
+	// 		left.pressed = false;
+	// 		return true;
+	// 	} else if (evt.key.key == SDLK_D) {
+	// 		right.pressed = false;
+	// 		return true;
+	// 	} else if (evt.key.key == SDLK_W) {
+	// 		up.pressed = false;
+	// 		return true;
+	// 	} else if (evt.key.key == SDLK_S) {
+	// 		down.pressed = false;
+	// 		return true;
+	// 	}
+	// } else if (evt.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+	// 	if (SDL_GetWindowRelativeMouseMode(Mode::window) == false) {
+	// 		SDL_SetWindowRelativeMouseMode(Mode::window, true);
+	// 		return true;
+	// 	}
+	// } else if (evt.type == SDL_EVENT_MOUSE_MOTION) {
+	// 	if (SDL_GetWindowRelativeMouseMode(Mode::window) == true) {
+	// 		glm::vec2 motion = glm::vec2(
+	// 			evt.motion.xrel / float(window_size.y),
+	// 			-evt.motion.yrel / float(window_size.y)
+	// 		);
+	// 		camera->transform->rotation = glm::normalize(
+	// 			camera->transform->rotation
+	// 			* glm::angleAxis(-motion.x * camera->fovy, glm::vec3(0.0f, 1.0f, 0.0f))
+	// 			* glm::angleAxis(motion.y * camera->fovy, glm::vec3(1.0f, 0.0f, 0.0f))
+	// 		);
+	// 		return true;
+	// 	}
+	// }
 	if (evt.type == SDL_EVENT_KEY_DOWN) {
-		if (evt.key.key == SDLK_ESCAPE) {
-			SDL_SetWindowRelativeMouseMode(Mode::window, false);
-			return true;
-		} else if (evt.key.key == SDLK_A) {
-			left.downs += 1;
-			left.pressed = true;
-			return true;
-		} else if (evt.key.key == SDLK_D) {
-			right.downs += 1;
-			right.pressed = true;
-			return true;
-		} else if (evt.key.key == SDLK_W) {
-			up.downs += 1;
-			up.pressed = true;
-			return true;
-		} else if (evt.key.key == SDLK_S) {
-			down.downs += 1;
-			down.pressed = true;
+		if (evt.key.key == SDLK_SPACE) {
+			space.downs += 1;
+			space.pressed = true;
 			return true;
 		}
 	} else if (evt.type == SDL_EVENT_KEY_UP) {
-		if (evt.key.key == SDLK_A) {
-			left.pressed = false;
-			return true;
-		} else if (evt.key.key == SDLK_D) {
-			right.pressed = false;
-			return true;
-		} else if (evt.key.key == SDLK_W) {
-			up.pressed = false;
-			return true;
-		} else if (evt.key.key == SDLK_S) {
-			down.pressed = false;
-			return true;
-		}
-	} else if (evt.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
-		if (SDL_GetWindowRelativeMouseMode(Mode::window) == false) {
-			SDL_SetWindowRelativeMouseMode(Mode::window, true);
-			return true;
-		}
-	} else if (evt.type == SDL_EVENT_MOUSE_MOTION) {
-		if (SDL_GetWindowRelativeMouseMode(Mode::window) == true) {
-			glm::vec2 motion = glm::vec2(
-				evt.motion.xrel / float(window_size.y),
-				-evt.motion.yrel / float(window_size.y)
-			);
-			camera->transform->rotation = glm::normalize(
-				camera->transform->rotation
-				* glm::angleAxis(-motion.x * camera->fovy, glm::vec3(0.0f, 1.0f, 0.0f))
-				* glm::angleAxis(motion.y * camera->fovy, glm::vec3(1.0f, 0.0f, 0.0f))
-			);
+		if (evt.key.key == SDLK_SPACE) {
+			space.pressed = false;
 			return true;
 		}
 	}
@@ -125,18 +174,30 @@ void PlayMode::update(float elapsed) {
 	wobble += elapsed / 10.0f;
 	wobble -= std::floor(wobble);
 
-	hip->rotation = hip_base_rotation * glm::angleAxis(
-		glm::radians(5.0f * std::sin(wobble * 2.0f * float(M_PI))),
-		glm::vec3(0.0f, 1.0f, 0.0f)
-	);
-	upper_leg->rotation = upper_leg_base_rotation * glm::angleAxis(
-		glm::radians(7.0f * std::sin(wobble * 2.0f * 2.0f * float(M_PI))),
-		glm::vec3(0.0f, 0.0f, 1.0f)
-	);
-	lower_leg->rotation = lower_leg_base_rotation * glm::angleAxis(
-		glm::radians(10.0f * std::sin(wobble * 3.0f * 2.0f * float(M_PI))),
-		glm::vec3(0.0f, 0.0f, 1.0f)
-	);
+	// hip->rotation = hip_base_rotation * glm::angleAxis(
+	// 	glm::radians(5.0f * std::sin(wobble * 2.0f * float(M_PI))),
+	// 	glm::vec3(0.0f, 1.0f, 0.0f)
+	// );
+	// upper_leg->rotation = upper_leg_base_rotation * glm::angleAxis(
+	// 	glm::radians(7.0f * std::sin(wobble * 2.0f * 2.0f * float(M_PI))),
+	// 	glm::vec3(0.0f, 0.0f, 1.0f)
+	// );
+	// lower_leg->rotation = lower_leg_base_rotation * glm::angleAxis(
+	// 	glm::radians(10.0f * std::sin(wobble * 3.0f * 2.0f * float(M_PI))),
+	// 	glm::vec3(0.0f, 0.0f, 1.0f)
+	// );
+
+	//move pipes:
+	for (auto &s : spawned) {
+		s.transform->position += s.velocity * elapsed;
+	}
+
+	//bird physics:
+	{
+		constexpr float Gravity = -9.8f;
+		bird_velocity.z += Gravity * elapsed;
+		bird->position += bird_velocity * elapsed;
+	}
 
 	//move camera:
 	{
@@ -165,6 +226,56 @@ void PlayMode::update(float elapsed) {
 	right.downs = 0;
 	up.downs = 0;
 	down.downs = 0;
+}
+
+Scene::Transform *PlayMode::spawn(MeshBuffer const &buffer, GLuint vao,
+	std::string const &mesh_name,
+	glm::vec3 const &position, glm::quat const &rotation, glm::vec3 const &scale) {
+
+	Mesh const &mesh = buffer.lookup(mesh_name); //throws if name is wrong
+
+	scene.transforms.emplace_back();
+	Scene::Transform *transform = &scene.transforms.back();
+	transform->name = mesh_name;
+	transform->position = position;
+	transform->rotation = rotation;
+	transform->scale = scale;
+
+	scene.drawables.emplace_back(transform);
+	Scene::Drawable &drawable = scene.drawables.back();
+
+	drawable.pipeline = lit_color_texture_program_pipeline;
+	drawable.pipeline.vao = vao;
+	drawable.pipeline.type = mesh.type;
+	drawable.pipeline.start = mesh.start;
+	drawable.pipeline.count = mesh.count;
+
+	spawned.emplace_back(SpawnedObject{transform, mesh_name});
+	return transform;
+}
+
+void PlayMode::despawn(Scene::Transform *transform) {
+	if (!transform) return;
+
+	assert(!camera || camera->transform != transform);
+
+	//reparent children
+	for (auto &t : scene.transforms) {
+		if (t.parent == transform) t.parent = transform->parent;
+	}
+
+	//erase anything referring to this transform
+	scene.drawables.remove_if([transform](Scene::Drawable const &d){ return d.transform == transform; });
+	scene.cameras.remove_if([transform](Scene::Camera const &c){ return c.transform == transform; });
+	scene.lights.remove_if([transform](Scene::Light const &l){ return l.transform == transform; });
+
+	//the transform itself:
+	scene.transforms.remove_if([transform](Scene::Transform const &t){ return &t == transform; });
+
+	spawned.erase(
+		std::remove_if(spawned.begin(), spawned.end(),
+			[transform](SpawnedObject const &s){ return s.transform == transform; }),
+		spawned.end());
 }
 
 void PlayMode::draw(glm::uvec2 const &drawable_size) {

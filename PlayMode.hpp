@@ -1,5 +1,5 @@
 #include "Mode.hpp"
-
+#include "Mesh.hpp"
 #include "Scene.hpp"
 
 #include <glm/glm.hpp>
@@ -22,7 +22,7 @@ struct PlayMode : Mode {
 	struct Button {
 		uint8_t downs = 0;
 		uint8_t pressed = 0;
-	} left, right, down, up;
+	} left, right, down, up, space;
 
 	//local copy of the game scene (so code can change it during gameplay):
 	Scene scene;
@@ -38,5 +38,24 @@ struct PlayMode : Mode {
 	
 	//camera:
 	Scene::Camera *camera = nullptr;
+
+	//bird:
+	Scene::Transform *bird = nullptr;
+	glm::vec3 bird_velocity = glm::vec3(0.0f);
+
+	//objects placed at runtime:
+	struct SpawnedObject {
+		Scene::Transform *transform = nullptr;
+		std::string mesh_name;
+		glm::vec3 velocity = glm::vec3(0.0f);
+	};
+	std::vector< SpawnedObject > spawned;
+
+	Scene::Transform *spawn(MeshBuffer const &buffer, GLuint vao,
+		std::string const &mesh_name,
+		glm::vec3 const &position = glm::vec3(0.0f),
+		glm::quat const &rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+		glm::vec3 const &scale = glm::vec3(1.0f));
+	void despawn(Scene::Transform *transform);
 
 };
