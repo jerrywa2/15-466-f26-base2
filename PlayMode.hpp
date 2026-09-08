@@ -26,15 +26,6 @@ struct PlayMode : Mode {
 
 	//local copy of the game scene (so code can change it during gameplay):
 	Scene scene;
-
-	//hexapod leg to wobble:
-	Scene::Transform *hip = nullptr;
-	Scene::Transform *upper_leg = nullptr;
-	Scene::Transform *lower_leg = nullptr;
-	glm::quat hip_base_rotation;
-	glm::quat upper_leg_base_rotation;
-	glm::quat lower_leg_base_rotation;
-	float wobble = 0.0f;
 	
 	//camera:
 	Scene::Camera *camera = nullptr;
@@ -48,9 +39,20 @@ struct PlayMode : Mode {
 		Scene::Transform *transform = nullptr;
 		std::string mesh_name;
 		glm::vec3 velocity = glm::vec3(0.0f);
+		bool scored = false;
 		float offset = 5.3f;
+		float baseZ = 0.0f;
+		bool oscillate = false;
+		float phase = 0.0f;
 	};
 	std::vector< SpawnedObject > spawned;
+
+	//game parameters:
+	std::uint32_t score = 0;
+	float spawnCD = 0.0f;
+	float osc_time = 0.0f;
+	float game_velocity = 5.0f;
+	bool game_over = false;
 
 	Scene::Transform *spawn(MeshBuffer const &buffer, GLuint vao,
 		std::string const &mesh_name,

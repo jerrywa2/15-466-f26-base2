@@ -55,6 +55,9 @@ PlayMode::PlayMode() : scene(*main_scene) {
 
 	spawn(*pipe_meshes, pipe_meshes_for_lit_color_texture_program, "Cylinder", glm::vec3(0.0f, 20.0f, -3.3f));//, glm::quat(1.0f, 0.0f, 0.0f, 0.0f), glm::vec3(1.2f, 1.2f, 1.2f));
 	spawned.back().velocity = glm::vec3(0.0f, -5.0f, 0.0f);
+
+	spawn(*pipe_meshes, pipe_meshes_for_lit_color_texture_program, "Cylinder", glm::vec3(0.0f, 30.0f, -6.3f));//, glm::quat(1.0f, 0.0f, 0.0f, 0.0f), glm::vec3(1.2f, 1.2f, 1.2f));
+	spawned.back().velocity = glm::vec3(0.0f, -5.0f, 0.0f);
 }
 
 PlayMode::~PlayMode() {
@@ -80,6 +83,12 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 
 void PlayMode::update(float elapsed) {
 
+	//oscillation presets:
+
+	constexpr float Amplitude = 1.5f;
+	constexpr float Period = 3.0f;
+	osc_time += elapsed;
+
 	//move pipes:
 	for (auto &s : spawned) {
 		s.transform->position += s.velocity * elapsed;
@@ -87,53 +96,83 @@ void PlayMode::update(float elapsed) {
 			// std::cout << "pipe in range; bird z: " << bird->position.z << "; pipe z + offset: " << s.transform->position.z + s.offset << std::endl;
 			if (bird->position.z > s.transform->position.z + s.offset + 2.0f || bird->position.z < s.transform->position.z + s.offset - 2.0f) {
 				// std::cout << "bird destroyed\n";
+				game_over = true;
 				despawn(bird);
 			}
 		}
+		if (!s.scored && !game_over && s.transform->position.y < -2.0f){
+			s.scored = true;
+			score++;
+		}
+		if (s.transform->position.y < -10.0f) {
+			despawn(s.transform);
+		}
+		//oscillate pipes
+		if (s.oscillate) {
+			s.transform->position.z = s.baseZ + Amplitude * std::sin(osc_time * 2.0f * float(M_PI) / Period + s.phase);
+		}
 	}
 
-	//spawn pipe
+
+	//spawn pipes:
+	if (spawnCD <= 0.0f) {
+		static std::mt19937 rng(std::random_device{}());
+		std::uniform_real_distribution< float > dist(-3.0f, 3.0f);
+		std::uniform_real_distribution< float > distPhase(0, 2 * float(M_PI));
+		auto newPipe = spawn(*pipe_meshes, pipe_meshes_for_lit_color_texture_program, "Cylinder", glm::vec3(0.0f, 40.0f + (0.6f * (game_velocity - 5)), -5.3f + dist(rng)));//, glm::quat(1.0f, 0.0f, 0.0f, 0.0f), glm::vec3(1.2f, 1.2f, 1.2f));
+		spawned.back().velocity = glm::vec3(0.0f, -game_velocity, 0.0f);
+		spawned.back().oscillate = dist(rng) > 1.0f; //randomly determine if the pipe will oscillate or not (one thirds of the time)
+		spawned.back().baseZ = newPipe->position.z;
+		spawned.back().phase = distPhase(rng);
+
+		game_velocity += 0.5f;
+		spawnCD = 2.0f;
+	} else {
+		spawnCD -= elapsed;
+	}
+	
 
 	//bird physics:
 	{
 		//flapping:
-		if (space.pressed) {
-			bird_velocity.z = 5.0f;
+		if (space.pressed && space.downs == 0) {
+			bird_velocity.z = 7.0f;
 		}
 
-		constexpr float Gravity = -16.0f;
+		constexpr float Gravity = -24.0f;
 		bird_velocity.z += Gravity * elapsed;
 		bird->position += bird_velocity * elapsed;
 	}
 	
 
-	//move camera:
-	{
+	// //move camera:
+	// {
 
-		//combine inputs into a move:
-		constexpr float PlayerSpeed = 30.0f;
-		glm::vec2 move = glm::vec2(0.0f);
-		if (left.pressed && !right.pressed) move.x =-1.0f;
-		if (!left.pressed && right.pressed) move.x = 1.0f;
-		if (down.pressed && !up.pressed) move.y =-1.0f;
-		if (!down.pressed && up.pressed) move.y = 1.0f;
+	// 	//combine inputs into a move:
+	// 	constexpr float PlayerSpeed = 30.0f;
+	// 	glm::vec2 move = glm::vec2(0.0f);
+	// 	if (left.pressed && !right.pressed) move.x =-1.0f;
+	// 	if (!left.pressed && right.pressed) move.x = 1.0f;
+	// 	if (down.pressed && !up.pressed) move.y =-1.0f;
+	// 	if (!down.pressed && up.pressed) move.y = 1.0f;
 
-		//make it so that moving diagonally doesn't go faster:
-		if (move != glm::vec2(0.0f)) move = glm::normalize(move) * PlayerSpeed * elapsed;
+	// 	//make it so that moving diagonally doesn't go faster:
+	// 	if (move != glm::vec2(0.0f)) move = glm::normalize(move) * PlayerSpeed * elapsed;
 
-		glm::mat4x3 frame = camera->transform->make_parent_from_local();
-		glm::vec3 frame_right = frame[0];
-		//glm::vec3 up = frame[1];
-		glm::vec3 frame_forward = -frame[2];
+	// 	glm::mat4x3 frame = camera->transform->make_parent_from_local();
+	// 	glm::vec3 frame_right = frame[0];
+	// 	//glm::vec3 up = frame[1];
+	// 	glm::vec3 frame_forward = -frame[2];
 
-		camera->transform->position += move.x * frame_right + move.y * frame_forward;
-	}
+	// 	camera->transform->position += move.x * frame_right + move.y * frame_forward;
+	// }
 
 	//reset button press counters:
 	left.downs = 0;
 	right.downs = 0;
 	up.downs = 0;
 	down.downs = 0;
+	space.downs = 0;
 }
 
 Scene::Transform *PlayMode::spawn(MeshBuffer const &buffer, GLuint vao,
@@ -220,14 +259,18 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		));
 
 		constexpr float H = 0.09f;
-		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
+		lines.draw_text("SPACE TO FLAP",
 			glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
-		float ofs = 2.0f / drawable_size.y;
-		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
-			glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + 0.1f * H + ofs, 0.0),
+		lines.draw_text("SCORE: " + std::to_string(score),
+			glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H + 0.2f, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
+			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
+		if (game_over)
+		lines.draw_text("GAME OVER",
+			glm::vec3(-aspect + 18 * H, -1.0 + 12 * H, 0.0),
+			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
 	}
 }
