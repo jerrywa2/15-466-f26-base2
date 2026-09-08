@@ -48,6 +48,7 @@ struct PlayMode : Mode {
 		Scene::Transform *transform = nullptr;
 		std::string mesh_name;
 		glm::vec3 velocity = glm::vec3(0.0f);
+		float offset = 5.3f;
 	};
 	std::vector< SpawnedObject > spawned;
 

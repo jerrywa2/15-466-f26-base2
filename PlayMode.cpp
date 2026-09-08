@@ -12,30 +12,6 @@
 
 #include <random>
 
-// GLuint hexapod_meshes_for_lit_color_texture_program = 0;
-// Load< MeshBuffer > hexapod_meshes(LoadTagDefault, []() -> MeshBuffer const * {
-// 	MeshBuffer const *ret = new MeshBuffer(data_path("hexapod.pnct"));
-// 	hexapod_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
-// 	return ret;
-// });
-
-// Load< Scene > hexapod_scene(LoadTagDefault, []() -> Scene const * {
-// 	return new Scene(data_path("hexapod.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
-// 		Mesh const &mesh = hexapod_meshes->lookup(mesh_name);
-
-// 		scene.drawables.emplace_back(transform);
-// 		Scene::Drawable &drawable = scene.drawables.back();
-
-// 		drawable.pipeline = lit_color_texture_program_pipeline;
-
-// 		drawable.pipeline.vao = hexapod_meshes_for_lit_color_texture_program;
-// 		drawable.pipeline.type = mesh.type;
-// 		drawable.pipeline.start = mesh.start;
-// 		drawable.pipeline.count = mesh.count;
-
-// 	});
-// });
-
 GLuint main_meshes_for_lit_color_texture_program = 0;
 Load< MeshBuffer > main_meshes(LoadTagDefault, []() -> MeshBuffer const * {
 	MeshBuffer const *ret = new MeshBuffer(data_path("bird.pnct"));
@@ -64,19 +40,6 @@ Load< Scene > main_scene(LoadTagDefault, []() -> Scene const * {
 });
 
 PlayMode::PlayMode() : scene(*main_scene) {
-	//get pointers to leg for convenience:
-	// for (auto &transform : scene.transforms) {
-	// 	if (transform.name == "Hip.FL") hip = &transform;
-	// 	else if (transform.name == "UpperLeg.FL") upper_leg = &transform;
-	// 	else if (transform.name == "LowerLeg.FL") lower_leg = &transform;
-	// }
-	// if (hip == nullptr) throw std::runtime_error("Hip not found.");
-	// if (upper_leg == nullptr) throw std::runtime_error("Upper leg not found.");
-	// if (lower_leg == nullptr) throw std::runtime_error("Lower leg not found.");
-
-	// hip_base_rotation = hip->rotation;
-	// upper_leg_base_rotation = upper_leg->rotation;
-	// lower_leg_base_rotation = lower_leg->rotation;
 
 	for (auto &transform : scene.transforms) {	
 		if (transform.name == "Bird") bird = &transform;
@@ -87,10 +50,11 @@ PlayMode::PlayMode() : scene(*main_scene) {
 	if (scene.cameras.size() != 1) throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(scene.cameras.size()));
 	camera = &scene.cameras.front();
 	
-	spawn(*pipe_meshes, pipe_meshes_for_lit_color_texture_program, "Cylinder", glm::vec3(0.0f, 10.0f, -5.0f));
-	spawned.back().velocity = glm::vec3(0.0f, -3.0f, 0.0f);
-	spawn(*pipe_meshes, pipe_meshes_for_lit_color_texture_program, "Cylinder.002", glm::vec3(0.0f, 10.0f, 12.0f));
-	spawned.back().velocity = glm::vec3(0.0f, -3.0f, 0.0f);
+	spawn(*pipe_meshes, pipe_meshes_for_lit_color_texture_program, "Cylinder", glm::vec3(0.0f, 10.0f, -5.3f));//, glm::quat(1.0f, 0.0f, 0.0f, 0.0f), glm::vec3(1.2f, 1.2f, 1.2f));
+	spawned.back().velocity = glm::vec3(0.0f, -5.0f, 0.0f);
+
+	spawn(*pipe_meshes, pipe_meshes_for_lit_color_texture_program, "Cylinder", glm::vec3(0.0f, 20.0f, -3.3f));//, glm::quat(1.0f, 0.0f, 0.0f, 0.0f), glm::vec3(1.2f, 1.2f, 1.2f));
+	spawned.back().velocity = glm::vec3(0.0f, -5.0f, 0.0f);
 }
 
 PlayMode::~PlayMode() {
@@ -98,60 +62,6 @@ PlayMode::~PlayMode() {
 
 bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size) {
 
-	// if (evt.type == SDL_EVENT_KEY_DOWN) {
-	// 	if (evt.key.key == SDLK_ESCAPE) {
-	// 		SDL_SetWindowRelativeMouseMode(Mode::window, false);
-	// 		return true;
-	// 	} else if (evt.key.key == SDLK_A) {
-	// 		left.downs += 1;
-	// 		left.pressed = true;
-	// 		return true;
-	// 	} else if (evt.key.key == SDLK_D) {
-	// 		right.downs += 1;
-	// 		right.pressed = true;
-	// 		return true;
-	// 	} else if (evt.key.key == SDLK_W) {
-	// 		up.downs += 1;
-	// 		up.pressed = true;
-	// 		return true;
-	// 	} else if (evt.key.key == SDLK_S) {
-	// 		down.downs += 1;
-	// 		down.pressed = true;
-	// 		return true;
-	// 	}
-	// } else if (evt.type == SDL_EVENT_KEY_UP) {
-	// 	if (evt.key.key == SDLK_A) {
-	// 		left.pressed = false;
-	// 		return true;
-	// 	} else if (evt.key.key == SDLK_D) {
-	// 		right.pressed = false;
-	// 		return true;
-	// 	} else if (evt.key.key == SDLK_W) {
-	// 		up.pressed = false;
-	// 		return true;
-	// 	} else if (evt.key.key == SDLK_S) {
-	// 		down.pressed = false;
-	// 		return true;
-	// 	}
-	// } else if (evt.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
-	// 	if (SDL_GetWindowRelativeMouseMode(Mode::window) == false) {
-	// 		SDL_SetWindowRelativeMouseMode(Mode::window, true);
-	// 		return true;
-	// 	}
-	// } else if (evt.type == SDL_EVENT_MOUSE_MOTION) {
-	// 	if (SDL_GetWindowRelativeMouseMode(Mode::window) == true) {
-	// 		glm::vec2 motion = glm::vec2(
-	// 			evt.motion.xrel / float(window_size.y),
-	// 			-evt.motion.yrel / float(window_size.y)
-	// 		);
-	// 		camera->transform->rotation = glm::normalize(
-	// 			camera->transform->rotation
-	// 			* glm::angleAxis(-motion.x * camera->fovy, glm::vec3(0.0f, 1.0f, 0.0f))
-	// 			* glm::angleAxis(motion.y * camera->fovy, glm::vec3(1.0f, 0.0f, 0.0f))
-	// 		);
-	// 		return true;
-	// 	}
-	// }
 	if (evt.type == SDL_EVENT_KEY_DOWN) {
 		if (evt.key.key == SDLK_SPACE) {
 			space.downs += 1;
@@ -170,34 +80,32 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 
 void PlayMode::update(float elapsed) {
 
-	//slowly rotates through [0,1):
-	wobble += elapsed / 10.0f;
-	wobble -= std::floor(wobble);
-
-	// hip->rotation = hip_base_rotation * glm::angleAxis(
-	// 	glm::radians(5.0f * std::sin(wobble * 2.0f * float(M_PI))),
-	// 	glm::vec3(0.0f, 1.0f, 0.0f)
-	// );
-	// upper_leg->rotation = upper_leg_base_rotation * glm::angleAxis(
-	// 	glm::radians(7.0f * std::sin(wobble * 2.0f * 2.0f * float(M_PI))),
-	// 	glm::vec3(0.0f, 0.0f, 1.0f)
-	// );
-	// lower_leg->rotation = lower_leg_base_rotation * glm::angleAxis(
-	// 	glm::radians(10.0f * std::sin(wobble * 3.0f * 2.0f * float(M_PI))),
-	// 	glm::vec3(0.0f, 0.0f, 1.0f)
-	// );
-
 	//move pipes:
 	for (auto &s : spawned) {
 		s.transform->position += s.velocity * elapsed;
+		if (s.transform->position.y < 2.0f && s.transform->position.y > -2.0f) {
+			// std::cout << "pipe in range; bird z: " << bird->position.z << "; pipe z + offset: " << s.transform->position.z + s.offset << std::endl;
+			if (bird->position.z > s.transform->position.z + s.offset + 2.0f || bird->position.z < s.transform->position.z + s.offset - 2.0f) {
+				// std::cout << "bird destroyed\n";
+				despawn(bird);
+			}
+		}
 	}
+
+	//spawn pipe
 
 	//bird physics:
 	{
-		constexpr float Gravity = -9.8f;
+		//flapping:
+		if (space.pressed) {
+			bird_velocity.z = 5.0f;
+		}
+
+		constexpr float Gravity = -16.0f;
 		bird_velocity.z += Gravity * elapsed;
 		bird->position += bird_velocity * elapsed;
 	}
+	
 
 	//move camera:
 	{
